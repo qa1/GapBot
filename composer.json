@@ -8,6 +8,6 @@
             "Tsit\\GapBot\\": "src/"
         }
     },
-    "minimum-stability": "stable",
+    "minimum-stability": "dev",
     "require": {}
 }
