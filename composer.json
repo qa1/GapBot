@@ -1,0 +1,13 @@
+{
+    "name": "tsit/gap-bot",
+    "description": "Gap bot package",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Tsit\\GapBot\\": "src/"
+        }
+    },
+    "minimum-stability": "stable",
+    "require": {}
+}

@@ -7,7 +7,7 @@ require_once( 'Api.php' );
 
 $token = 'your token';
 try {
-	$gap = new Api( $token );
+	$gap = new \Tsi\GapBot\Api( $token );
 } catch ( Exception $e ) {
 	throw new \Exception( 'an error was encountered' );
 }

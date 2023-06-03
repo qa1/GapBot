@@ -1,8 +1,8 @@
 <?php
+namespace Tsi\GapBot;
 
 use CurlFile;
 use Exception;
-
 class Api
 {
 
