@@ -1,28 +1,30 @@
 <?php
+
 namespace Tsi\GapBot;
 
 use CurlFile;
 use Exception;
+
 class Api
 {
 
-    protected $baseURL = 'https://api.gap.im/';
+    protected static string $baseURL = 'https://api.gap.im/';
 
-    protected $token;
+    protected static string $token;
 
-    protected $lastMessage;
+    protected static $lastMessage;
 
     public function __construct($token)
     {
-        $this->token = $token;
-        if (is_null($this->token)) {
+        self::$token = $token;
+        if (is_null(self::$token)) {
             throw new Exception('Required "token" key not supplied');
         }
     }
 
-    public function getLastMessage()
+    public static function getLastMessage()
     {
-        return $this->lastMessage;
+        return self::$lastMessage;
     }
 
     /**
@@ -31,37 +33,40 @@ class Api
      * @param int $chat_id
      * @param string $action
      *
-     * @return Array
+     * @return bool|string|array
+     * @throws Exception
      */
-    public function sendAction($chat_id, $action)
+    public static function sendAction($chat_id, $action)
     {
         $actions = array(
             'typing',
         );
         if (in_array($action, $actions)) {
             $params = compact('chat_id');
-            return $this->sendRequest($action, $params, 'sendAction');
+            return self::sendRequest($action, $params, 'sendAction');
         }
 
-        throw new Exception('Invalid Action! Accepted value: ' . implode(', ', $actions));
+        throw new Exception(
+            'Invalid Action! Accepted value: ' . implode(', ', $actions)
+        );
     }
 
-    private function sendRequest($msgType, $params, $method = 'sendMessage')
+    private static function sendRequest($msgType, $params, $method = 'sendMessage')
     {
         if ($msgType) {
             $params['type'] = $msgType;
         }
 
         if ($method == 'sendMessage') {
-            $this->lastMessage = $params;
+            self::$lastMessage = $params;
         }
 
         $curl = curl_init();
-        curl_setopt($curl, CURLOPT_URL, $this->baseURL . $method);
+        curl_setopt($curl, CURLOPT_URL, self::$baseURL . $method);
         curl_setopt($curl, CURLOPT_HEADER, false);
         curl_setopt($curl, CURLOPT_POST, 1);
         curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query($params));
-        curl_setopt($curl, CURLOPT_HTTPHEADER, array('token: ' . $this->token));
+        curl_setopt($curl, CURLOPT_HTTPHEADER, array('token: ' . self::$token));
 
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
         $curl_result = curl_exec($curl);
@@ -84,13 +89,19 @@ class Api
      *
      * @param int $chat_id
      * @param string $data
-     * @param string $reply_keyboard
-     * @param array $inline_keyboard
-     *
-     * @return Array
+     * @param null $reply_keyboard
+     * @param null $inline_keyboard
+     * @param null $form
+     * @return array
+     * @throws Exception
      */
-    public function sendText($chat_id, $data, $reply_keyboard = null, $inline_keyboard = null, $form = null)
-    {
+    public static function sendText(
+        $chat_id,
+        $data,
+        $reply_keyboard = null,
+        $inline_keyboard = null,
+        $form = null
+    ) {
         $params = compact('chat_id', 'data');
         if ($reply_keyboard) {
             $params['reply_keyboard'] = $reply_keyboard;
@@ -102,7 +113,7 @@ class Api
             $params['form'] = json_encode($form);
         }
 
-        $message = $this->sendRequest('text', $params);
+        $message = self::sendRequest('text', $params);
         return $message ? json_decode($message, true)['id'] : false;
     }
 
@@ -116,9 +127,9 @@ class Api
      * @param string $reply_keyboard
      * @param array $inline_keyboard
      *
-     * @return Array
+     * @return array
      */
-    public function sendLocation(
+    public static function sendLocation(
         $chat_id,
         $lat,
         $long,
@@ -139,7 +150,7 @@ class Api
             $params['form'] = json_encode($form);
         }
 
-        $message = $this->sendRequest('location', $params);
+        $message = self::sendRequest('location', $params);
         return $message ? json_decode($message, true)['id'] : false;
     }
 
@@ -152,10 +163,16 @@ class Api
      * @param string $reply_keyboard
      * @param array $inline_keyboard
      *
-     * @return Array
+     * @return array
      */
-    public function sendContact($chat_id, $phone, $name, $reply_keyboard = null, $inline_keyboard = null, $form = null)
-    {
+    public static function sendContact(
+        $chat_id,
+        $phone,
+        $name,
+        $reply_keyboard = null,
+        $inline_keyboard = null,
+        $form = null
+    ) {
         $data = json_encode(compact('phone', 'name'));
         $params = compact('chat_id', 'data');
         if ($reply_keyboard) {
@@ -168,7 +185,7 @@ class Api
             $params['form'] = json_encode($form);
         }
 
-        $message = $this->sendRequest('contact', $params);
+        $message = self::sendRequest('contact', $params);
         return $message ? json_decode($message, true)['id'] : false;
     }
 
@@ -177,13 +194,14 @@ class Api
      *
      * @param int $chat_id
      * @param string $image
-     * @param string $description
-     * @param string $reply_keyboard
-     * @param array $inline_keyboard
-     *
-     * @return Array
+     * @param string $desc
+     * @param null $reply_keyboard
+     * @param null $inline_keyboard
+     * @param null $form
+     * @return array
+     * @throws Exception
      */
-    public function sendImage(
+    public static function sendImage(
         $chat_id,
         $image,
         $desc = '',
@@ -196,7 +214,7 @@ class Api
             if (!is_file($image)) {
                 throw new Exception("Image path is invalid");
             }
-            list($msgType, $image) = $this->uploadFile('image', $image, $desc);
+            list($msgType, $image) = self::uploadFile('image', $image, $desc);
         }
 
         $params = compact('chat_id');
@@ -211,21 +229,21 @@ class Api
             $params['form'] = json_encode($form);
         }
 
-        $message = $this->sendRequest($msgType, $params);
+        $message = self::sendRequest($msgType, $params);
         return $message ? json_decode($message, true)['id'] : false;
     }
 
-    private function uploadFile($type, $file, $desc)
+    private static function uploadFile($type, $file, $desc)
     {
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
         $mime_type = finfo_file($finfo, $file);
         $data[$type] = new CurlFile($file, $mime_type, basename($file));
 
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $this->baseURL . 'upload');
+        curl_setopt($ch, CURLOPT_URL, self::$baseURL . 'upload');
         curl_setopt($ch, CURLOPT_POST, 1);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array('token: ' . $this->token));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array('token: ' . self::$token));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         $uploaded = curl_exec($ch);
         $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -247,9 +265,9 @@ class Api
      * @param string $reply_keyboard
      * @param array $inline_keyboard
      *
-     * @return Array
+     * @return array
      */
-    public function sendAudio(
+    public static function sendAudio(
         $chat_id,
         $audio,
         $desc = '',
@@ -262,7 +280,7 @@ class Api
             if (!is_file($audio)) {
                 throw new Exception("Audio path is invalid");
             }
-            list($msgType, $audio) = $this->uploadFile('audio', $audio, $desc);
+            list($msgType, $audio) = self::uploadFile('audio', $audio, $desc);
         }
 
         $params = compact('chat_id');
@@ -277,7 +295,7 @@ class Api
             $params['form'] = json_encode($form);
         }
 
-        $message = $this->sendRequest($msgType, $params);
+        $message = self::sendRequest($msgType, $params);
         return $message ? json_decode($message, true)['id'] : false;
     }
 
@@ -290,9 +308,9 @@ class Api
      * @param string $reply_keyboard
      * @param array $inline_keyboard
      *
-     * @return Array
+     * @return array
      */
-    public function sendVideo(
+    public static function sendVideo(
         $chat_id,
         $video,
         $desc = '',
@@ -305,7 +323,7 @@ class Api
             if (!is_file($video)) {
                 throw new Exception("Video path is invalid");
             }
-            list($msgType, $video) = $this->uploadFile('video', $video, $desc);
+            list($msgType, $video) = self::uploadFile('video', $video, $desc);
         }
 
         $params = compact('chat_id');
@@ -320,7 +338,7 @@ class Api
             $params['form'] = json_encode($form);
         }
 
-        $message = $this->sendRequest($msgType, $params);
+        $message = self::sendRequest($msgType, $params);
         return $message ? json_decode($message, true)['id'] : false;
     }
 
@@ -333,16 +351,22 @@ class Api
      * @param string $reply_keyboard
      * @param array $inline_keyboard
      *
-     * @return Array
+     * @return array
      */
-    public function sendFile($chat_id, $file, $desc = '', $reply_keyboard = null, $inline_keyboard = null, $form = null)
-    {
+    public static function sendFile(
+        $chat_id,
+        $file,
+        $desc = '',
+        $reply_keyboard = null,
+        $inline_keyboard = null,
+        $form = null
+    ) {
         $msgType = 'file';
         if (!json_decode($file)) {
             if (!is_file($file)) {
                 throw new Exception("File path is invalid");
             }
-            list($msgType, $file) = $this->uploadFile('file', $file, $desc);
+            list($msgType, $file) = self::uploadFile('file', $file, $desc);
         }
 
         $params = compact('chat_id');
@@ -357,7 +381,7 @@ class Api
             $params['form'] = json_encode($form);
         }
 
-        $message = $this->sendRequest($msgType, $params);
+        $message = self::sendRequest($msgType, $params);
         return $message ? json_decode($message, true)['id'] : false;
     }
 
@@ -370,9 +394,9 @@ class Api
      * @param string $reply_keyboard
      * @param array $inline_keyboard
      *
-     * @return Array
+     * @return array
      */
-    public function sendVoice(
+    public static function sendVoice(
         $chat_id,
         $voice,
         $desc = '',
@@ -385,7 +409,7 @@ class Api
             if (!is_file($voice)) {
                 throw new Exception("Voice path is invalid");
             }
-            list($msgType, $voice) = $this->uploadFile('voice', $voice, $desc);
+            list($msgType, $voice) = self::uploadFile('voice', $voice, $desc);
         }
 
         $params = compact('chat_id');
@@ -400,7 +424,7 @@ class Api
             $params['form'] = json_encode($form);
         }
 
-        $message = $this->sendRequest($msgType, $params);
+        $message = self::sendRequest($msgType, $params);
         return $message ? json_decode($message, true)['id'] : false;
     }
 
@@ -412,10 +436,14 @@ class Api
      * @param string $data
      * @param array $inline_keyboard
      *
-     * @return Array
+     * @return array
      */
-    public function editMessage($chat_id, $message_id, $data = null, $inline_keyboard = null)
-    {
+    public static function editMessage(
+        $chat_id,
+        $message_id,
+        $data = null,
+        $inline_keyboard = null
+    ) {
         $params = compact('chat_id', 'message_id', 'data', 'inline_keyboard');
         if ($inline_keyboard) {
             if (!is_array($inline_keyboard)) {
@@ -423,7 +451,7 @@ class Api
             }
             $params['inline_keyboard'] = json_encode($inline_keyboard);
         }
-        return $this->sendRequest(null, $params, 'editMessage');
+        return self::sendRequest(null, $params, 'editMessage');
     }
 
     /**
@@ -432,12 +460,12 @@ class Api
      * @param int $chat_id
      * @param int $message_id
      *
-     * @return Array
+     * @return array
      */
-    public function deleteMessage($chat_id, $message_id)
+    public static function deleteMessage($chat_id, $message_id)
     {
         $params = compact('chat_id', 'message_id');
-        return $this->sendRequest(null, $params, 'deleteMessage');
+        return self::sendRequest(null, $params, 'deleteMessage');
     }
 
     /**
@@ -448,17 +476,21 @@ class Api
      * @param string $text
      * @param bool $show_alert
      *
-     * @return Array
+     * @return array
      */
-    public function answerCallback($chat_id, $callback_id, $text, $show_alert = false)
-    {
+    public static function answerCallback(
+        $chat_id,
+        $callback_id,
+        $text,
+        $show_alert = false
+    ) {
         $params = compact('chat_id', 'callback_id', 'text', 'show_alert');
         if ($show_alert) {
             $params['show_alert'] = 'true';
         } else {
             $params['show_alert'] = 'false';
         }
-        return $this->sendRequest(null, $params, 'answerCallback');
+        return self::sendRequest(null, $params, 'answerCallback');
     }
 
     /**
@@ -471,13 +503,24 @@ class Api
      *
      * @return string
      */
-    public function sendInvoice($chat_id, $amount, $description, $expire_date = '', $currency = 'IRR')
-    {
+    public static function sendInvoice(
+        $chat_id,
+        $amount,
+        $description,
+        $expire_date = '',
+        $currency = 'IRR'
+    ) {
         $expire_date = (is_numeric(
                 $expire_date
             ) && (int)$expire_date == $expire_date && $expire_date >= 300 && $expire_date <= 604800) ? $expire_date : 86400;
-        $params = compact('chat_id', 'amount', 'description', 'expire_date', 'currency');
-        $result = $this->sendRequest('text', $params, 'invoice');
+        $params = compact(
+            'chat_id',
+            'amount',
+            'description',
+            'expire_date',
+            'currency'
+        );
+        $result = self::sendRequest('text', $params, 'invoice');
         $result = json_decode($result, true);
         return $result['id'];
     }
@@ -492,15 +535,26 @@ class Api
      * @param string $currency
      *
      * @return string
+     * @throws Exception
      */
-    public function sendImageInvoice($chat_id, $amount, $image, $description, $expire_date = '', $currency = 'IRR')
-    {
+    public static function sendImageInvoice(
+        $chat_id,
+        $amount,
+        $image,
+        $description,
+        $expire_date = '',
+        $currency = 'IRR'
+    ) {
         $msgType = 'image';
         if (!json_decode($image)) {
             if (!is_file($image)) {
                 throw new Exception("Image path is invalid");
             }
-            list($msgType, $image) = $this->uploadFile('image', $image, $description);
+            list($msgType, $image) = self::uploadFile(
+                'image',
+                $image,
+                $description
+            );
         }
         $expire_date = (is_numeric(
                 $expire_date
@@ -508,23 +562,24 @@ class Api
         $params = compact('chat_id', 'amount', 'currency', 'expire_date');
         $params['image'] = $image;
 
-        $result = $this->sendRequest($msgType, $params, 'invoice');
+        $result = self::sendRequest($msgType, $params, 'invoice');
         $result = json_decode($result, true);
         return $result['id'];
     }
 
+
     /**
      * Invoice inquiry.
      *
-     * @param int $chat_id
-     * @param int $ref_id (invoiceId)
-     *
-     * @return array
+     * @param $chat_id
+     * @param $ref_id
+     * @return array|void
+     * @throws Exception
      */
-    public function invoiceInquiry($chat_id, $ref_id)
+    public static function invoiceInquiry($chat_id, $ref_id)
     {
         $params = compact('chat_id', 'ref_id');
-        $result = $this->sendRequest(null, $params, 'invoice/inquiry');
+        $result = self::sendRequest(null, $params, 'invoice/inquiry');
         $result = json_decode($result, true);
         if (is_array($result)) {
             return $result;
@@ -537,12 +592,13 @@ class Api
      * @param int $chat_id
      * @param int $ref_id (invoiceId)
      *
-     * @return array
+     * @return bool
+     * @throws Exception
      */
-    public function invoiceVerify($chat_id, $ref_id)
+    public static function invoiceVerify($chat_id, $ref_id) : bool
     {
         $params = compact('chat_id', 'ref_id');
-        $result = $this->sendRequest(null, $params, 'invoice/verify');
+        $result = self::sendRequest(null, $params, 'invoice/verify');
         $result = json_decode($result, true);
         return is_array($result) && $result['status'] == 'verified';
     }
@@ -555,10 +611,10 @@ class Api
      *
      * @return bool
      */
-    public function payVerify($chat_id, $ref_id)
+    public static function payVerify($chat_id, $ref_id)
     {
         $params = compact('chat_id', 'ref_id');
-        $result = $this->sendRequest(null, $params, 'payment/verify');
+        $result = self::sendRequest(null, $params, 'payment/verify');
         $result = json_decode($result, true);
         return is_array($result) && $result['status'] == 'verified';
     }
@@ -571,10 +627,10 @@ class Api
      *
      * @return array
      */
-    public function payInquiry($chat_id, $ref_id)
+    public static function payInquiry($chat_id, $ref_id)
     {
         $params = compact('chat_id', 'ref_id');
-        $result = $this->sendRequest(null, $params, 'payment/inquiry');
+        $result = self::sendRequest(null, $params, 'payment/inquiry');
         $result = json_decode($result, true);
         if (is_array($result)) {
             return $result;
@@ -589,10 +645,10 @@ class Api
      *
      * @return bool
      */
-    public function requestWalletCharge($chat_id, $desc = null)
+    public static function requestWalletCharge($chat_id, $desc = null)
     {
         $params = compact('chat_id', 'desc');
-        return $this->sendRequest(null, $params, 'requestWalletCharge');
+        return self::sendRequest(null, $params, 'requestWalletCharge');
     }
 
     /**
@@ -604,7 +660,7 @@ class Api
      *
      * @return String
      */
-    public function replyKeyboard($keyboard, $once = true, $selective = false)
+    public static function replyKeyboard($keyboard, $once = true, $selective = false)
     {
         if (!is_array($keyboard)) {
             throw new Exception("keyboard must be array");
@@ -622,10 +678,10 @@ class Api
      * @return mixed
      * @throws Exception
      */
-    public function getGameData($chat_id, $type)
+    public static function getGameData($chat_id, $type)
     {
         $params = compact('chat_id', 'type');
-        $result = $this->sendRequest(null, $params, 'getGameData');
+        $result = self::sendRequest(null, $params, 'getGameData');
         return $result ? json_decode($result, true)['data'] : false;
     }
 
@@ -640,10 +696,10 @@ class Api
      * @return mixed
      * @throws Exception
      */
-    public function setGameData($chat_id, $type, $data, $force = false)
+    public static function setGameData($chat_id, $type, $data, $force = false)
     {
         $params = compact('chat_id', 'type', 'data', 'force');
-        return $this->sendRequest(null, $params, 'gameData');
+        return self::sendRequest(null, $params, 'gameData');
     }
 
     /**
@@ -655,10 +711,10 @@ class Api
      * @return mixed
      * @throws Exception
      */
-    public function getGameConfig($chat_id, $key = null)
+    public static function getGameConfig($chat_id, $key = null)
     {
         $params = compact('chat_id', 'key');
-        $result = $this->sendRequest(null, $params, 'getGameConfig');
+        $result = self::sendRequest(null, $params, 'getGameConfig');
         return $result ? json_decode($result, true)['configs'] : false;
     }
 
@@ -672,7 +728,7 @@ class Api
      * @return mixed
      * @throws Exception
      */
-    public function gameEvent($chat_id, $event, $value)
+    public static function gameEvent($chat_id, $event, $value)
     {
         if (empty($event)) {
             throw new Exception('Event required!');
@@ -681,7 +737,7 @@ class Api
             throw new Exception('Value required!');
         }
         $params = compact('chat_id', 'event', 'value');
-        return $this->sendRequest(null, $params, 'gameEvent');
+        return self::sendRequest(null, $params, 'gameEvent');
     }
 
     /**
@@ -693,7 +749,7 @@ class Api
      * @return mixed
      * @throws Exception
      */
-    public function leaderBoard($chat_id, $type = 'all')
+    public static function leaderBoard($chat_id, $type = 'all')
     {
         $types = array(
             'all',
@@ -702,10 +758,12 @@ class Api
             'day'
         );
         if (!in_array($type, $types)) {
-            throw new Exception('Invalid Type! Accepted value: ' . implode(', ', $types));
+            throw new Exception(
+                'Invalid Type! Accepted value: ' . implode(', ', $types)
+            );
         }
         $params = compact('chat_id', 'type');
-        $result = $this->sendRequest(null, $params, 'leaderBoard');
+        $result = self::sendRequest(null, $params, 'leaderBoard');
         return $result ? json_decode($result, true) : false;
     }
 }
