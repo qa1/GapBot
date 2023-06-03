@@ -1,5 +1,5 @@
 {
-    "name": "qa1/gapbot",
+    "name": "qa1/gap-bot",
     "description": "Gap bot package",
     "type": "library",
     "license": "MIT",
